@@ -1,0 +1,30 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: social-api-middleware
+  namespace: social 
+spec:
+  headers:
+    customRequestHeaders:
+      Origin: "https://gitter.uk"
+    customResponseHeaders:
+      Access-Control-Allow-Origin: "https://gitter.uk"
+      Access-Control-Allow-Credentials: "true"
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: social-api
+  namespace: social
+spec:
+  routes:
+    - match: Host(`api.gitter.uk`)
+      kind: Rule
+      middlewares:  
+      - name: social-api-middleware
+        namespace: social 
+      services: # Service to redirect requests to
+      - name: gitter-social-api
+        port: 8089
+  tls:
+    secretName: api-cert-secret

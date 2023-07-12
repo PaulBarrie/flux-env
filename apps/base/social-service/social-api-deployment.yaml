@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitter-social-api
+  namespace: social
+spec:
+  replicas: 3
+  rollingUpdate:
+    maxSurge: 2
+    maxUnavailable: 0 
+  selector:
+    matchLabels:
+      app: gitter-social-api
+  template:
+    metadata:
+      labels:
+        app: gitter-social-api
+    spec:
+      containers:
+      - name: gitter-social-api 
+        image: quay.io/gitter/social-network-api:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "600m"
+            memory: "600Mi"
+          requests:
+            cpu: "600m"
+            memory: "600Mi"
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SERVER_PORT
+          value: "8081"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DATABASE_URL
+          value: jdbc:postgresql://postgres-social-postgresql:5432/social-db
+        - name: DATABASE_USER
+          value: social-api
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: social-api-secret
+              key: db-password
+        - name: DATABASE_NAME
+          value: social-api
+        - name: APPLICATION_URL
+          value: "https://api.gitter.uk"
+        - name: APP_URL
+          value: "https://gitter.uk"
+        - name: CODE_API_URL
+          value: "http://code-api.code-service.svc.cluster.local:3001"
+        - name: KEYCLOAK_REALM_NAME
+          value: gitter
+        - name: KEYCLOAK_CLIENT_ID
+          value: social-api
+        - name: KEYCLOAK_SERVER_URL
+          value: "https://gitter.uk/auth"
+        # - name: KEYCLOAK_PROXY_URL
+        #   value: "https://traefik.kube-system.svc.cluster.local:80"
+        - name: KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: social-api-secret
+              key: keycloak-client-secret
+        - name: MINIO_URL
+          value: "http://minio-release.bucket-service.svc.cluster.local:9000"
+        - name: BUCKET_PICTURE_NAME
+          value: images
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: social-api-secret
+              key: minio-access-key
+        - name: MINIO_ACCESS_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: social-api-secret
+              key: minio-secret-key
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitter-social-api
+  namespace: social
+spec:
+  selector:
+    app: gitter-social-api
+  ports:
+  - port: 8089
+    targetPort: 8081

@@ -1,0 +1,21 @@
+#Source: https://artifacthub.io/packages/helm/openfaas/openfaas
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: code-services-stack-dev
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: basic-auth
+  namespace: code-service
+  envs:
+  - secrets/basic-auth.env
+- name: code-api
+  namespace: code-service
+  envs:
+  - secrets/code-api.env
+resources:
+  - namespaces.yaml
+  - ../../base/code-service
+patchesStrategicMerge:
+  - openfaas-release-patch.yaml

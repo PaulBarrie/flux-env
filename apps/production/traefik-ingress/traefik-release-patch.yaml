@@ -1,0 +1,22 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: traefik-release
+  namespace: kube-system
+spec:
+  values:
+    additionalArguments:
+      - "--accesslog=true"
+      - "--log.level=DEBUG"
+      - "--serversTransport.insecureSkipVerify=true"
+      - "--api=true"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      - "--providers.kubernetescrd"
+      - "--providers.kubernetescrd.allowCrossNamespace=true" 
+      - "--certificatesresolvers.cloudflare.acme.storage=/data/acme.json"
+      - "--certificatesresolvers.cloudflare.acme.tlschallenge=true"
+      - "--certificatesresolvers.cloudflare.acme.email=paul.barrie.calmels@gmail.com"
+      - "--entrypoints.websecure.http.tls.certresolver=cloudflare"
+      - "--entrypoints.web.proxyProtocol.insecure"
+      - "--entrypoints.web.forwardedHeaders.insecure"

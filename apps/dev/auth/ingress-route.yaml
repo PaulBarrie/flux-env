@@ -1,0 +1,14 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: keycloak
+  namespace: auth
+spec:
+  routes:
+    - match: Host(`dev.gitter.uk`) && PathPrefix(`/auth`) # Hostname to match
+      kind: Rule
+      services: # Service to redirect requests to
+        - name: keycloak-http
+          port: 8443
+  tls:                              
+    secretName: dev-cert-secret

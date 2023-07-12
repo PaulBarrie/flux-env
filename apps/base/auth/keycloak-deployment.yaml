@@ -1,0 +1,105 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: auth
+spec:
+  selector:
+    matchLabels:
+      app: keycloak
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:18.0.2
+        args:
+        - start
+        - --auto-build
+        - --log-level=debug
+        - --hostname=gitter.uk
+        # - --hostname-port=443 
+        - --http-relative-path=/auth
+        - --http-enabled=true
+        - --hostname-strict=true
+        - --http-port=8080
+        # - --https-port=8443
+        - --db=postgres
+        - --db-url=jdbc:postgresql://db-keycloak-postgresql/keycloak-db
+        - --db-username=keycloak
+        - --db-password=password
+        env:
+        - name: KEYCLOAK_FRONTEND_URL
+          value: "https://gitter.uk/auth/"
+        - name: KC_HTTPS_CERTIFICATE_FILE
+          value: "/etc/certificates/tls.crt"
+        - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+          value: "/etc/certificates/tls.key"
+        - name: "KEYCLOAK_ADMIN_URL"
+          value: "https://gitter.uk/auth/"
+        - name:  PROXY_ADDRESS_FORWARDING
+          value: "true"
+        - name: KC_PROXY
+          value: "edge"
+        envFrom:
+          - secretRef:
+              name: keycloak-secret
+
+        volumeMounts:
+        # - name: listener
+        #   mountPath: "/opt/keycloak/providers"
+        - name: realm-config
+          mountPath: "/opt/keycloak/data/import"
+        - name: certificates
+          mountPath: "/etc/certificates"
+        resources:
+          limits:
+            memory: 400Mi
+            cpu: 700m
+          requests:
+            memory: 400Mi
+            cpu: 700m
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        - containerPort: 4444
+          name: replication
+        # readinessProbe:
+        #   httpGet:
+        #     path: "/auth/realms/master"
+        #     port: 8080
+      volumes:
+        - name: realm-config
+          configMap:
+            name: realm-config
+            items:
+            - key: "realm-config.json"
+              path: "realm-config.json"
+        - name: certificates
+          secret:
+            secretName: cert-secret
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: auth
+spec:
+  selector:
+    app: keycloak
+  type: NodePort
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  - name: https
+    port: 8443
+    targetPort: 8443

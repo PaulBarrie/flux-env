@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: social-services-stack-dev
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: postgres-social-secret
+  namespace: social
+  envs:
+  - secrets/postgres.env
+- name: social-api-secret
+  namespace: social
+  envs:
+  - secrets/api.env
+resources:
+  - namespace.yaml
+  - ../../base/social-service
+  - certificate.yaml
+  - ingress-route.yaml

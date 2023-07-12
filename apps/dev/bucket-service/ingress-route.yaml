@@ -1,0 +1,17 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: minio
+  namespace: bucket-service
+spec:
+  routes:
+    - match: Host(`dev.gitter.uk`) && PathPrefix(`/minio`) # Hostname to match
+      kind: Rule
+      services: # Service to redirect requests to
+        - name: minio-release
+          port: 9000
+          strategy: RoundRobin
+          weight: 9
+          scheme: http
+  tls:                              
+    secretName: dev-cert-secret

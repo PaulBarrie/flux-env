@@ -1,0 +1,98 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: traefik-release
+  namespace: kube-system
+spec:
+  releaseName: traefik
+  targetNamespace: kube-system
+  chart:
+    spec:
+      chart: traefik
+      version: 10.x.x
+      sourceRef:
+        kind: HelmRepository
+        name: traefik-repo
+        namespace: flux-system
+  interval: '1m0s'
+  install:
+    remediation:
+      retries: 3
+    timeout: '10m0s'
+
+  # https://artifacthub.io/packages/helm/traefik/traefik?modal=values
+  # https://traefik.io/blog/install-and-configure-traefik-with-helm/
+  values:
+    additionalArguments:
+      # - --api=true
+      - "--accesslog=true"
+      - "--log.level=DEBUG"
+      - "--entryPoints.web.address=:8000/tcp"
+      - "--entryPoints.websecure.address=:8443/tcp"
+      - "--entryPoints.traefik.address=:9000/tcp"
+      - "--api=true"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      - "--providers.kubernetescrd"
+      - "--providers.kubernetescrd.allowCrossNamespace=true"
+    ports:
+      web:
+        redirectTo: websecure
+
+    env:
+      - name: CF_API_EMAIL
+        valueFrom:
+          secretKeyRef:
+            key: email
+            name: cloudflare-secret
+      - name: CF_API_KEY
+        valueFrom:
+          secretKeyRef:
+            key: api-key
+            name: cloudflare-secret
+
+    ingressRoute:
+      dashboard:
+        enabled: false
+    services:
+      enabled: true
+      type: LoadBalancer
+      labels:
+        app.kubernetes.io/instance: traefik
+        app.kubernetes.io/name: traefik
+      spec:
+        externalTrafficPolicy: Local
+        selector:
+          app.kubernetes.io/instance: traefik
+          app.kubernetes.io/name: traefik
+
+    #https://github.com/traefik/traefik-helm-chart/issues/164
+    # securityContext:
+    #   readOnlyRootFilesystem: false
+    #   runAsGroup: 0
+    #   runAsUser: 0
+    #   runAsNonRoot: false
+    persistence:
+      enabled: true
+      path: /data
+      size: 128Mi
+      name: public-cert
+  
+    # deployment:
+    #   replicas: 1
+    #   initContainers:
+    #   - name: take-data-dir-ownership
+    #     image: alpine:3.6
+    #     command:
+    #     - chown
+    #     - -R  
+    #     - 600:600
+    #     - /certs
+    #     volumeMounts:
+    #     - name: public-cert
+    #       mountPath: /certs
+    #   volumes:
+    #   - name: public-cert
+    #     persistentVolumeClaim:
+    #       claimName: traefik
+

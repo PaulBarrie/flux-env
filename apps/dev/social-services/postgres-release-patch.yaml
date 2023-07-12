@@ -1,0 +1,8 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: postgres-social-release
+  namespace: default
+spec:
+  targetNamespace: social
+  releaseName: postgres-social-release

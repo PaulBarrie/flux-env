@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: bucket-service
+metadata:
+  name: bucket-service-stack-dev
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: minio-secret
+  namespace: bucket-service
+  envs:
+  - secrets/minio.env
+resources:
+  - namespace.yaml
+  - ../../base/bucket-service
+  - ingress-route.yaml
+patchesStrategicMerge:
+  - bucket-service-patch.yaml

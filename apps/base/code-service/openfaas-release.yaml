@@ -1,0 +1,24 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: openfaas-release
+  namespace: code-service
+spec:
+  releaseName: openfaas
+  chart:
+    spec:
+      chart: openfaas
+      version: 10.x.x
+      sourceRef:
+        kind: HelmRepository
+        name: openfaas-repo
+        namespace: flux-system
+  interval: '1m0s'
+  install:
+    remediation:
+      retries: 3
+    timeout: '10m0s'
+  #https://artifacthub.io/packages/helm/openfaas/openfaas?modal=values
+  values:
+    functionNamespace: 'openfaas-fn'
+    generateBasicAuth: false

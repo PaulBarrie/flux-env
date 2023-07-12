@@ -1,0 +1,45 @@
+
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: minio-release
+  namespace: default
+spec:
+  releaseName: minio
+  targetNamespace: default
+  chart:
+    spec:
+      chart: minio
+      version: 11.x.x
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami-repo
+        namespace: flux-system
+  interval: '1m0s'
+  install:
+    remediation:
+      retries: 3
+    timeout: '10m0s'
+  #https://artifacthub.io/packages/helm/minio/minio?modal=values
+  values:
+    auth:
+      existingSecret: minio-secret
+    persistence:
+      accessMode: ReadWriteOnce
+      size: 5Gi
+    clientImage:
+      registry: quay.io
+      repository: minio/minio
+      tag: RELEASE.2022-07-08T00-05-23Z.fips
+    initContainers:
+    - name: init-bucket
+      image: minio/mc
+      command: ["/bin/sh", "-c"]
+      args: 
+        - |
+          /usr/bin/mc alias set myminio http://minio:9000/ minioadmin minioadmin;
+          /usr/bin/mc mb myminio/code;
+          /usr/bin/mc version enable myminio/code;
+          /usr/bin/mc mb myminio/images;
+          /usr/bin/mc version enable myminio/images;
+          exit 0;

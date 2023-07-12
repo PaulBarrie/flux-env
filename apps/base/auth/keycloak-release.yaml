@@ -1,0 +1,126 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: keycloak-release
+  namespace: auth
+spec:
+  releaseName: keycloak
+  chart:
+    spec:
+      chart: keycloak
+      version: 18.x.x
+      sourceRef:
+        kind: HelmRepository
+        name: codecentric-repo
+        namespace: flux-system
+  interval: '1m0s'
+  install:
+    remediation:
+      retries: 3
+    timeout: '10m0s'
+  # https://github.com/codecentric/helm-charts/tree/keycloak-9.8.1/charts/keycloak#high-availability-and-clustering
+  # https://artifacthub.io/packages/helm/codecentric/keycloak?modal=values&path=startupProbe
+  values:
+    image:
+      repository: quay.io/keycloak/keycloak
+      tag: 18.0.2
+    # autoscaling:
+    #   enabled: true
+    replicas: 1
+    command:
+      - ./opt/keycloak/bin/kc.sh
+      - start
+    args: 
+    - --auto-build
+    - --log-level=debug
+    - --hostname=gitter.uk
+    - --http-relative-path=/auth
+    - --http-enabled=true
+    - --hostname-strict=true
+    - --http-port=8080
+    postgresql:
+      enabled: false
+    extraEnv: |
+      - name: KC_DB
+        value: postgres
+      - name: KC_DB_URL
+        value: jdbc:postgresql://db-keycloak-postgresql:5432/keycloak-db
+      - name: KC_DB_USER
+        valueFrom:
+          secretKeyRef:
+            name: keycloak-secret
+            key: db-username
+      - name: KC_DB_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: keycloak-secret
+            key: db-password
+      - name: DB_DATABASE
+        value: keycloak-db
+      - name: KEYCLOAK_FRONTEND_URL
+        value: "https://gitter.uk/auth/"
+      - name: "KEYCLOAK_ADMIN_URL"
+        value: "https://gitter.uk/auth/realms/master/admin/"
+      - name: KC_HTTPS_CERTIFICATE_FILE
+        value: "/etc/certificates/tls.crt"
+      - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+        value: "/etc/certificates/tls.key"
+      - name: KC_PROXY
+        value: "edge"
+      - name: PROXY_ADDRESS_FORWARDING
+        value: "true"
+      - name: SOCIAL_API_URL
+        value: http://gitter-social-api.social.svc.cluster.local:8089
+      # - name: JGROUPS_DISCOVERY_PROTOCOL
+      #   value: kubernetes.KUBE_PING
+      # - name: KUBERNETES_NAMESPACE
+      #   valueFrom:
+      #     fieldRef:
+      #       apiVersion: v1
+      #       fieldPath: metadata.namespace
+      # - name: CACHE_OWNERS_COUNT
+      #   value: "2"
+      # - name: CACHE_OWNERS_AUTH_SESSIONS_COUNT
+      #   value: "2"
+    extraEnvFrom: |
+      - secretRef:
+          name: keycloak-secret
+    rbac:
+      create: true
+      rules:
+        - apiGroups:
+            - ""
+          resources:
+            - pods
+          verbs:
+            - get
+            - list
+    extraInitContainers: |
+      - name: get-listener
+        image: busybox
+        command:
+          - ./bin/sh
+          - -c
+        args:
+          - "wget -O /home/listener/keycloak-listener.jar https://github.com/gitter-flow/keycloak-event-listener/raw/master/target/keycloak-event-listener-0.0.1.jar"
+        volumeMounts:
+          - name: keycloak-listener
+            mountPath: /home/listener
+            readOnly: false
+    extraVolumeMounts: |
+      - name: realm-secret
+        mountPath: "/realm/"
+        readOnly: true
+      - name: keycloak-listener
+        mountPath: /opt/keycloak/providers/
+      - name: certificates
+        mountPath: "/etc/certificates"
+    extraVolumes: |
+      - name: realm-secret
+        secret:
+          secretName: realm-secret
+      - name: certificates
+        secret:
+          secretName: cert-secret
+      - name: keycloak-listener
+        emptyDir: {}

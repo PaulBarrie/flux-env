@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitter-cert
+  namespace: social
+spec:
+  secretName: api-cert-secret
+  issuerRef:
+    name: gitter
+    kind: ClusterIssuer
+  dnsNames:
+    - api.gitter.uk

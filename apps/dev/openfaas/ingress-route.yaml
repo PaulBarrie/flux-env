@@ -1,0 +1,18 @@
+# https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-ingressroute
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: openfaas
+  namespace: openfaas
+spec:
+  routes:
+    - match: Host(`dev.gitter.uk`) #&& PathPrefix(`/ui`) 
+      kind: Rule
+      services: # Service to redirect requests to
+        - name: gateway
+          port: 8080
+          strategy: RoundRobin
+          weight: 9
+          scheme: http
+  tls:                              
+    secretName: dev-cert-secret

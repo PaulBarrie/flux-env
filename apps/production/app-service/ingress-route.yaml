@@ -1,0 +1,14 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: app
+  namespace: app-service
+spec:
+  routes:
+    - match: Host(`gitter.uk`) && PathPrefix(`/`)
+      kind: Rule
+      services:
+      - name: gitter-app
+        port: 3000
+  tls:                              
+    secretName: cert-secret
