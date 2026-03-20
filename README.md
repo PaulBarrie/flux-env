@@ -1,4 +1,4 @@
-# Gitter environement
+# Gitter environment
 
 >## Manage Flux environment
 
